@@ -1,0 +1,206 @@
+#include <iostream>
+#include <string>
+#include "base_de_datos.h"
+#include "usuario.h"
+
+void mostrar_menu_principal() {
+  std::cout << "\n=== Plataforma Colaborativa FIS ===\n";
+  std::cout << "1. Registrar usuario\n";
+  std::cout << "2. Iniciar sesión\n";
+  std::cout << "3. Salir\n";
+  std::cout << "Seleccione una opción: ";
+}
+
+void mostrar_menu_sesion() {
+  std::cout << "\n Menú Usuario Estándar:\n";
+  std::cout << "1. Ver mis grupos\n";
+  std::cout << "2. Ver mis proyectos\n";
+  std::cout << "3. Cambiar mi contraseña\n";
+  std::cout << "4. Eliminar mi cuenta\n";
+  std::cout << "0. Cerrar sesión\n";
+  std::cout << "Seleccione una opción: ";
+}
+
+void mostrar_menu_Admin() {
+  std::cout << "\n Menú Administrador:\n";
+  std::cout << "1. Crear Usuario\n";
+  std::cout << "2. Crear Grupo\n";
+  std::cout << "3. Crear Proyecto\n";
+  std::cout << "4. Cambiar mi contraseña\n";
+  std::cout << "5. Eliminar mi cuenta\n";
+  std::cout << "0. Cerrar sesión\n";
+  std::cout << "Seleccione una opción: ";
+}
+
+int main() {
+  BaseDeDatos bd("fichero_almacenamiento.txt");
+  int opcion;
+  bool continuar = true;
+
+  while (continuar) {
+    mostrar_menu_principal();
+    std::cin >> opcion;
+    std::cin.ignore();  // Limpiar buffer
+
+    switch (opcion) {
+      case 1: { // Registrar usuario
+        std::string nombre, contrasena, tipo_cuenta;
+        std::cout << "Ingrese nombre de usuario: ";
+        std::getline(std::cin, nombre);
+      
+        bool contrasena_valida = false;
+      
+        while (!contrasena_valida) {
+          std::cout << "Ingrese contraseña: ";
+          std::getline(std::cin, contrasena);
+      
+          if (contrasena.length() <= 3) {
+            std::cout << "La contraseña debe tener más de 4 caracteres.\n";
+          } else if (contrasena == nombre) {
+            std::cout << "La contraseña no puede ser igual al nombre de usuario.\n";
+          } else {
+            contrasena_valida = true;
+          }
+        }
+
+        unsigned tipo_usuario = 0;
+        while (true) {
+          std::cout << "Ingrese el tipo de cuenta (Desarrollador, Administrador): ";
+          std::getline(std::cin, tipo_cuenta);
+          
+          if (tipo_cuenta == "Desarrollador") {
+            tipo_usuario = 0;
+            break;
+          } else if (tipo_cuenta == "Administrador") {
+            tipo_usuario = 1;
+            break;
+          } else {
+            std::cout << "Error: El tipo de cuenta no está recogido en la plataforma.\n";
+          }
+        }
+      
+        Usuario nuevo_usuario(nombre, contrasena, tipo_usuario);
+        if (bd.CrearUsuario(nuevo_usuario)) {
+          bd.ActualizarFicheroAlmacenamiento();
+          std::cout << "Usuario registrado correctamente.\n";
+        } else {
+          std::cout << "Error: el usuario ya existe.\n";
+        }
+        break;
+      }
+      
+      case 2: { // Iniciar sesión
+        std::string nombre, contrasena;
+        while (true) {
+          std::cout << "Ingrese nombre de usuario: ";
+          std::getline(std::cin, nombre);
+          // Comprobar usuario existente y mostrar error si no existe
+           if (!bd.UsuarioExiste(nombre)) {
+            std::cout << "El usuario introducido no existe, si eres nuevo en la "
+                      << "plataforma\nelige la opción registrarse.\n";
+            continue;
+          }
+          break;
+        }
+        int intentos_restantes = 3;
+        bool autenticado = false;
+      
+        while (intentos_restantes > 0) {
+          std::cout << "Ingrese contraseña: ";
+          std::getline(std::cin, contrasena);
+      
+          if (bd.AutenticarUsuario(nombre, contrasena)) {
+            autenticado = true;
+            break;
+          } else {
+            intentos_restantes--;
+            std::cout << "Contraseña incorrecta. Intentos restantes: " << intentos_restantes << "\n";
+          }
+        }
+      
+        if (!autenticado) {
+          std::cout << "Has fallado 3 veces. El sistema se cerrará por seguridad.\n";
+          return 0; // Finaliza el programa inmediatamente
+        }
+      
+        std::cout << "Inicio de sesión exitoso. ¡Bienvenido, " << nombre << "!\n";
+      
+        int tipo_usuario = bd.buscarTipoUsuario(nombre);
+        bd.setUsuarioActual(nombre, tipo_usuario);
+      
+        bool en_sesion = true;
+        while (en_sesion) {
+          int opcion_sesion = -1;
+      
+          if (bd.getTipoUsuarioActual() == 1) {
+            mostrar_menu_Admin();
+          } else {
+            mostrar_menu_sesion();
+          }
+      
+          std::cin >> opcion_sesion;
+          std::cin.ignore();
+      
+          if (bd.getTipoUsuarioActual() == 1) {
+            switch (opcion_sesion) {
+              case 1:
+                std::cout << "(Función crear usuario aún no implementada)\n";
+                break;
+              case 2:
+                std::cout << "(Función crear grupo aún no implementada)\n";
+                break;
+              case 3:
+                std::cout << "(Función crear proyecto aún no implementada)\n";
+                break;
+              case 4:
+                bd.cambiarContrasenaUsuarioActual();
+                break;
+              case 5:
+                bd.eliminarUsuarioActual();
+                en_sesion = false;
+                break;
+              case 0:
+                std::cout << "Sesión cerrada.\n";
+                en_sesion = false;
+                break;
+              default:
+                std::cout << "Opción no válida.\n";
+            }
+          } else {
+            switch (opcion_sesion) {
+              case 1:
+                std::cout << "(Función ver grupos aún no implementada)\n";
+                break;
+              case 2:
+                std::cout << "(Función ver proyectos aún no implementada)\n";
+                break;
+              case 3:
+                bd.cambiarContrasenaUsuarioActual();
+                break;
+              case 4:
+                bd.eliminarUsuarioActual();
+                en_sesion = false;
+                break;
+              case 0:
+                std::cout << "Sesión cerrada.\n";
+                en_sesion = false;
+                break;
+              default:
+                std::cout << "Opción no válida.\n";
+            }
+          }
+        }
+        break;
+      }
+      
+      case 3: // Salir
+        std::cout << "Saliendo del sistema. ¡Hasta luego!\n";
+        continuar = false;
+        break;
+      default:
+        std::cout << "Opción no válida. Intente de nuevo.\n";
+    }
+  }
+  bd.ActualizarFicheroAlmacenamiento();
+  return 0;
+}
